@@ -15,12 +15,12 @@ jobs:
 
     - name: Generate internal configs
       shell: bash
-      run: cd src/main/cpp/ && cmake . && cd -
+      run: cd src/main/cpp/arrow/cpp && cmake . && cd -
       
     - name: Build C++ example
       shell: bash
       run: mkdir -p build && cd build && cmake ../src/main/cpp/ && make && cd -
 
-    - name: Run C++ example (includes generating Arrow files for Java)
+    - name: Run C++ example (includes generating Arrow input files for Java)
       shell: bash
       run: cd build && ./empty_list_demo && cd -
