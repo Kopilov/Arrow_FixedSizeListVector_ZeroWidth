@@ -1,0 +1,29 @@
+plugins {
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation group: 'org.apache.arrow', name: 'arrow-vector', version: '2.0.0'
+    implementation group: 'org.apache.arrow', name: 'arrow-memory-unsafe', version: '2.0.0'
+
+    testImplementation(platform('org.junit:junit-bom:5.7.0'))
+    testImplementation('org.junit.jupiter:junit-jupiter')
+}
+
+test {
+    useJUnitPlatform()
+    testLogging.showStandardStreams = true
+    testLogging.showExceptions = true
+    testLogging.showStackTraces = true
+    testLogging.showCauses = true
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
