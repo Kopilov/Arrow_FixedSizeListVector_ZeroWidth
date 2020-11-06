@@ -1,0 +1,26 @@
+name: Reproduce
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Pull C++ source dependencies
+      shell: bash
+      run: git submodule update --init
+
+    - name: Generate internal configs
+      shell: bash
+      run: cd src/main/cpp/ && cmake . && cd -
+      
+    - name: Build C++ example
+      shell: bash
+      run: mkdir -p build && cd build && cmake ../src/main/cpp/ && make && cd -
+
+    - name: Run C++ example (includes generating Arrow files for Java)
+      shell: bash
+      run: cd build && ./empty_list_demo && cd -
