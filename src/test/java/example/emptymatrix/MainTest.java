@@ -17,4 +17,14 @@ public class MainTest {
     void readSecondColumnAsMatrix() throws Exception {
         Main.readSecondColumnAsMatrix("build/twoColumnsTable.arrow");
     }
+
+    @Test
+    void readIntegerMatrixWithNulls() throws Exception {
+        Main.readIntegerMatrix("build/numericIntMatrixWithNulls.arrow");
+    }
+
+    @Test
+    void writeIntegerMatrixWithNulls() throws Exception {
+        Main.writeIntegerMatrixWithNulls("build/numericIntMatrixWithNullsFromJava.arrow");
+    }
 }

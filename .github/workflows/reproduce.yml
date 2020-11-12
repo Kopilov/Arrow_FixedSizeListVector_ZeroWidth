@@ -30,6 +30,10 @@ jobs:
       with:
         java-version: 11
         
-    - name: Build and run Java example (unexpected result for zero-width)
+    - name: Build and run Java example (unexpected result for zero-width, test writing nulls)
       shell: bash
       run: gradle test --info || true
+
+    - name: Run C++ example again (includes reading examples from Java and previos C++ invocation)
+      shell: bash
+      run: cd build && ./empty_list_demo && cd -

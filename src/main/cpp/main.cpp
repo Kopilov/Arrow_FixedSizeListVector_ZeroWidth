@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sys/stat.h>
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 #include "arrow/ipc/api.h"
@@ -8,6 +9,11 @@ void exitOnError(arrow::Status status) {
         std::cerr << status.message() << std::endl;
         std::terminate();
     }
+}
+
+inline bool file_exists (const std::string& name) {
+    struct stat buffer;
+    return (stat (name.c_str(), &buffer) == 0);
 }
 
 std::shared_ptr<arrow::FixedSizeListArray> generateIntegerMatrix(std::shared_ptr<arrow::DataType>* type) {
@@ -35,6 +41,30 @@ std::shared_ptr<arrow::FixedSizeListArray> generateIntegerMatrix(std::shared_ptr
     return array;
 }
 
+std::shared_ptr<arrow::FixedSizeListArray> generateIntegerMatrixWithNulls(std::shared_ptr<arrow::DataType>* type) {
+    std::shared_ptr<arrow::FixedSizeListArray> array;
+    std::shared_ptr<arrow::NumericBuilder<arrow::Int32Type>> nestedBuilder = std::make_shared<arrow::NumericBuilder<arrow::Int32Type>>();
+    std::shared_ptr<arrow::FixedSizeListBuilder> builder = std::make_shared<arrow::FixedSizeListBuilder>(arrow::default_memory_pool(), nestedBuilder, 4);
+    arrow::Status status;
+
+    status = builder->Append();
+    exitOnError(status);
+    status = nestedBuilder->AppendValues({10, 1, 20, 30}, {true, false, true, true});
+    exitOnError(status);
+    status = builder->Append();
+    exitOnError(status);
+    status = nestedBuilder->AppendValues({40, 50, 2, 60}, {true, true, false, true});
+    exitOnError(status);
+    status = builder->Append();
+    exitOnError(status);
+    status = nestedBuilder->AppendValues({3, 70, 80, 90}, {false, true, true, true});
+    exitOnError(status);
+
+    status = builder->Finish(&array);
+    exitOnError(status);
+    *type = builder->type();
+    return array;
+}
 
 std::shared_ptr<arrow::FixedSizeListArray> generateIntegerMatrixZeroWidth(std::shared_ptr<arrow::DataType>* type) {
     std::shared_ptr<arrow::FixedSizeListArray> array;
@@ -102,7 +132,11 @@ void printMatrix(std::shared_ptr<arrow::FixedSizeListArray> list_array) {
         list_array->value_slice(i);
         std::shared_ptr<arrow::Int32Array> list = std::static_pointer_cast<arrow::Int32Array>(list_array->value_slice(i));
         for (int j = 0; j < list->length(); j++) {
-            std::cout << list->Value(j) << " ";
+            if (list->IsValid(j)) {
+                std::cout << list->Value(j) << " ";
+            } else {
+                std::cout << "null" << " ";
+            }
         }
         std::cout << std::endl;
     }
@@ -135,15 +169,21 @@ void readSecondColumnAsMatrix(std::string fileName) {
 }
 
 int main(int argsc, char** argsv) {
-    try {
-        writeOneColumnTable(generateIntegerMatrix, "NumericIntMatrix", "numericIntMatrix.arrow");
-        writeOneColumnTable(generateIntegerMatrixZeroWidth, "NumericIntMatrixZeroWidth", "numericIntMatrixZeroWidth.arrow");
-        writeTwoColumnsTable("twoColumnsTable.arrow");
-    } catch(std::exception& e) {
-        std::terminate();
+    if (file_exists("numericIntMatrixWithNullsFromJava.arrow")) {
+        readIntegerMatrix("numericIntMatrix.arrow");
+        readIntegerMatrix("numericIntMatrixZeroWidth.arrow");
+        readSecondColumnAsMatrix("twoColumnsTable.arrow");
+        readIntegerMatrix("numericIntMatrixWithNulls.arrow");
+        readIntegerMatrix("numericIntMatrixWithNullsFromJava.arrow");
+    } else {
+        try {
+            writeOneColumnTable(generateIntegerMatrix, "NumericIntMatrix", "numericIntMatrix.arrow");
+            writeOneColumnTable(generateIntegerMatrixZeroWidth, "NumericIntMatrixZeroWidth", "numericIntMatrixZeroWidth.arrow");
+            writeTwoColumnsTable("twoColumnsTable.arrow");
+            writeOneColumnTable(generateIntegerMatrixWithNulls, "NumericIntMatrixWithNulls", "numericIntMatrixWithNulls.arrow");
+        } catch(std::exception& e) {
+            std::terminate();
+        }
     }
 
-    readIntegerMatrix("numericIntMatrix.arrow");
-    readIntegerMatrix("numericIntMatrixZeroWidth.arrow");
-    readSecondColumnAsMatrix("twoColumnsTable.arrow");
 }
