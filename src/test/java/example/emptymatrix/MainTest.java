@@ -1,5 +1,6 @@
 package example.emptymatrix;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 
 public class MainTest {
@@ -19,12 +20,12 @@ public class MainTest {
     }
 
     @Test
-    void readIntegerMatrixWithNulls() throws Exception {
-        Main.readIntegerMatrix("build/numericIntMatrixWithNulls.arrow");
+    void writeIntegerMatrix() throws Exception {
+        Main.writeIntegerMatrix("build/numericIntMatrixFromJava.arrow");
     }
 
     @Test
-    void writeIntegerMatrixWithNulls() throws Exception {
-        Main.writeIntegerMatrixWithNulls("build/numericIntMatrixWithNullsFromJava.arrow");
+    void writeIntegerMatrixZeroWidth() throws Exception {
+        Main.writeIntegerMatrixZeroWidth("build/numericIntMatrixZeroWidthFromJava.arrow");
     }
 }

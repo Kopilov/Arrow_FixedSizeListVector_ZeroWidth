@@ -19,31 +19,6 @@ inline bool file_exists (const std::string& name) {
 std::shared_ptr<arrow::FixedSizeListArray> generateIntegerMatrix(std::shared_ptr<arrow::DataType>* type) {
     std::shared_ptr<arrow::FixedSizeListArray> array;
     std::shared_ptr<arrow::NumericBuilder<arrow::Int32Type>> nestedBuilder = std::make_shared<arrow::NumericBuilder<arrow::Int32Type>>();
-    std::shared_ptr<arrow::FixedSizeListBuilder> builder = std::make_shared<arrow::FixedSizeListBuilder>(arrow::default_memory_pool(), nestedBuilder, 3);
-    arrow::Status status;
-
-    status = builder->Append();
-    exitOnError(status);
-    status = nestedBuilder->AppendValues({10, 20, 30});
-    exitOnError(status);
-    status = builder->Append();
-    exitOnError(status);
-    status = nestedBuilder->AppendValues({40, 50, 60});
-    exitOnError(status);
-    status = builder->Append();
-    exitOnError(status);
-    status = nestedBuilder->AppendValues({70, 80, 90});
-    exitOnError(status);
-
-    status = builder->Finish(&array);
-    exitOnError(status);
-    *type = builder->type();
-    return array;
-}
-
-std::shared_ptr<arrow::FixedSizeListArray> generateIntegerMatrixWithNulls(std::shared_ptr<arrow::DataType>* type) {
-    std::shared_ptr<arrow::FixedSizeListArray> array;
-    std::shared_ptr<arrow::NumericBuilder<arrow::Int32Type>> nestedBuilder = std::make_shared<arrow::NumericBuilder<arrow::Int32Type>>();
     std::shared_ptr<arrow::FixedSizeListBuilder> builder = std::make_shared<arrow::FixedSizeListBuilder>(arrow::default_memory_pool(), nestedBuilder, 4);
     arrow::Status status;
 
@@ -54,6 +29,8 @@ std::shared_ptr<arrow::FixedSizeListArray> generateIntegerMatrixWithNulls(std::s
     status = builder->Append();
     exitOnError(status);
     status = nestedBuilder->AppendValues({40, 50, 2, 60}, {true, true, false, true});
+    exitOnError(status);
+    status = builder->AppendNull();
     exitOnError(status);
     status = builder->Append();
     exitOnError(status);
@@ -79,6 +56,8 @@ std::shared_ptr<arrow::FixedSizeListArray> generateIntegerMatrixZeroWidth(std::s
     status = builder->Append();
     exitOnError(status);
     status = nestedBuilder->AppendValues({});
+    exitOnError(status);
+    status = builder->AppendNull();
     exitOnError(status);
     status = builder->Append();
     exitOnError(status);
@@ -129,7 +108,10 @@ void printMatrix(std::shared_ptr<arrow::FixedSizeListArray> list_array) {
     std::cout << "Size is " << list_array->length() << " * " << list_array->list_type()->list_size() << std::endl;
 
     for (int i = 0; i < list_array->length(); i++) {
-        list_array->value_slice(i);
+        if (list_array->IsNull(i)) {
+            std::cout << "nullrow" << std::endl;
+            continue;
+        }
         std::shared_ptr<arrow::Int32Array> list = std::static_pointer_cast<arrow::Int32Array>(list_array->value_slice(i));
         for (int j = 0; j < list->length(); j++) {
             if (list->IsValid(j)) {
@@ -169,18 +151,17 @@ void readSecondColumnAsMatrix(std::string fileName) {
 }
 
 int main(int argsc, char** argsv) {
-    if (file_exists("numericIntMatrixWithNullsFromJava.arrow")) {
+    if (file_exists("numericIntMatrixFromJava.arrow")) {
         readIntegerMatrix("numericIntMatrix.arrow");
         readIntegerMatrix("numericIntMatrixZeroWidth.arrow");
         readSecondColumnAsMatrix("twoColumnsTable.arrow");
-        readIntegerMatrix("numericIntMatrixWithNulls.arrow");
-        readIntegerMatrix("numericIntMatrixWithNullsFromJava.arrow");
+        readIntegerMatrix("numericIntMatrixFromJava.arrow");
+        readIntegerMatrix("numericIntMatrixZeroWidthFromJava.arrow");
     } else {
         try {
             writeOneColumnTable(generateIntegerMatrix, "NumericIntMatrix", "numericIntMatrix.arrow");
             writeOneColumnTable(generateIntegerMatrixZeroWidth, "NumericIntMatrixZeroWidth", "numericIntMatrixZeroWidth.arrow");
             writeTwoColumnsTable("twoColumnsTable.arrow");
-            writeOneColumnTable(generateIntegerMatrixWithNulls, "NumericIntMatrixWithNulls", "numericIntMatrixWithNulls.arrow");
         } catch(std::exception& e) {
             std::terminate();
         }

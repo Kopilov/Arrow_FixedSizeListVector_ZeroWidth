@@ -11,7 +11,7 @@ jobs:
 
     - name: Pull C++ source dependencies
       shell: bash
-      run: git submodule update --init
+      run: git submodule update --init --recursive
 
     - name: Generate internal configs
       shell: bash
@@ -30,9 +30,13 @@ jobs:
       with:
         java-version: 11
         
-    - name: Build and run Java example (unexpected result for zero-width, test writing nulls)
+    - name: Install Arrow snapshot to Maven local
       shell: bash
-      run: gradle test --info || true
+      run: cd src/main/cpp/arrow/java && mvn install && cd -
+
+    - name: Build and run Java example
+      shell: bash
+      run: gradle test --info
 
     - name: Run C++ example again (includes reading examples from Java and previos C++ invocation)
       shell: bash

@@ -17,6 +17,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 public class Main {
     static FileChannel openFileChannel(File memoryMappingFile) throws IOException {
@@ -49,6 +50,10 @@ public class Main {
         System.out.println("Size is " + rows + " * " + columns);
         for (int i = 0; i < rows; i++) {
             List<?> inRow = (List<?>) vector.getObject(i);
+            if (inRow == null) {
+                System.out.println("nullrow");
+                continue;
+            }
             for (int j = 0; j < columns; j++) {
                 System.out.print(inRow.get(j));
                 System.out.print(" ");
@@ -57,14 +62,18 @@ public class Main {
         }
     }
 
-    static void writeListVector(UnionFixedSizeListWriter writer, List<Integer> values) {
+    static void writeListVector(UnionFixedSizeListWriter writer, FixedSizeListVector vector, List<Integer> values) {
         writer.startList();
-        for (Integer v: values) {
-            if (v == null) {
-                writer.integer().writeNull();
-            } else {
-                writer.integer().writeInt(v);
+        if (values != null) {
+            for (Integer v: values) {
+                if (v == null) {
+                    writer.integer().writeNull();
+                } else {
+                    writer.integer().writeInt(v);
+                }
             }
+        } else {
+            vector.setNull(writer.getPosition());
         }
         writer.endList();
     }
@@ -81,20 +90,44 @@ public class Main {
         printMatrix(vector);
     }
 
-    static void writeIntegerMatrixWithNulls(String path) throws IOException {
-        FixedSizeListVector vector = FixedSizeListVector.empty("numericIntMatrixWithNulls", 4, new RootAllocator());
+    static void writeIntegerMatrix(String path) throws IOException {
+        FixedSizeListVector vector = FixedSizeListVector.empty("numericIntMatrixWithNullRows", 4, new RootAllocator());
         UnionFixedSizeListWriter writer = vector.getWriter();
         writer.allocate();
 
         List<Integer> values1 = Arrays.asList(10, null, 20, 30);
         List<Integer> values2 = Arrays.asList(40, 50, null, 60);
-        List<Integer> values3 = Arrays.asList(null, 70, 80, 90);
+        List<Integer> values3 = null;
+        List<Integer> values4 = Arrays.asList(null, 70, 80, 90);
 
         //set some values
-        writer.setValueCount(3);
-        writeListVector(writer, values1);
-        writeListVector(writer, values2);
-        writeListVector(writer, values3);
+        writer.setValueCount(4);
+        writeListVector(writer, vector, values1);
+        writeListVector(writer, vector, values2);
+        writeListVector(writer, vector, values3);
+        writeListVector(writer, vector, values4);
+
+        Field field = vector.getField();
+        VectorSchemaRoot table = new VectorSchemaRoot(Arrays.asList(field), Arrays.asList(vector));
+        saveTable(table, path);
+    }
+
+    static void writeIntegerMatrixZeroWidth(String path) throws IOException {
+        FixedSizeListVector vector = FixedSizeListVector.empty("zeroWidthMatrixWithNullRows", 0, new RootAllocator());
+        UnionFixedSizeListWriter writer = vector.getWriter();
+        writer.allocate();
+
+        List<Integer> values1 = new ArrayList<>();
+        List<Integer> values2 = new ArrayList<>();
+        List<Integer> values3 = null;
+        List<Integer> values4 = new ArrayList<>();
+
+        //set some values
+        writer.setValueCount(4);
+        writeListVector(writer, vector, values1);
+        writeListVector(writer, vector, values2);
+        writeListVector(writer, vector, values3);
+        writeListVector(writer, vector, values4);
 
         Field field = vector.getField();
         VectorSchemaRoot table = new VectorSchemaRoot(Arrays.asList(field), Arrays.asList(vector));
@@ -103,54 +136,24 @@ public class Main {
 
     public static void main(String[] args) {
 
-        try {
-            readIntegerMatrix("build/numericIntMatrix.arrow");
-        } catch (IOException e) {
-            System.err.println("Declared error");
-            e.printStackTrace();
-        } catch (Exception e) {
-            System.err.println("Undeclared error");
-            e.printStackTrace();
-        }
+        List<Callable> cases = Arrays.asList(
+                () -> {readIntegerMatrix("build/numericIntMatrix.arrow"); return null;},
+                () -> {readIntegerMatrix("build/numericIntMatrixZeroWidth.arrow"); return null;},
+                () -> {readSecondColumnAsMatrix("build/twoColumnsTable.arrow"); return null;},
+                () -> {writeIntegerMatrix("build/numericIntMatrixFromJava.arrow"); return null;},
+                () -> {writeIntegerMatrixZeroWidth("build/numericIntMatrixZeroWidthFromJava.arrow"); return null;}
+        );
 
-        try {
-            readIntegerMatrix("build/numericIntMatrixZeroWidth.arrow");
-        } catch (IOException e) {
-            System.err.println("Declared error");
-            e.printStackTrace();
-        } catch (Exception e) {
-            System.err.println("Undeclared error");
-            e.printStackTrace();
-        }
-
-        try {
-            readSecondColumnAsMatrix("build/twoColumnsTable.arrow");
-        } catch (IOException e) {
-            System.err.println("Declared error");
-            e.printStackTrace();
-        } catch (Exception e) {
-            System.err.println("Undeclared error");
-            e.printStackTrace();
-        }
-
-        try {
-            readIntegerMatrix("build/numericIntMatrixWithNulls.arrow");
-        } catch (IOException e) {
-            System.err.println("Declared error");
-            e.printStackTrace();
-        } catch (Exception e) {
-            System.err.println("Undeclared error");
-            e.printStackTrace();
-        }
-
-        try {
-            writeIntegerMatrixWithNulls("build/numericIntMatrixWithNullsFromJava.arrow");
-        } catch (IOException e) {
-            System.err.println("Declared error");
-            e.printStackTrace();
-        } catch (Exception e) {
-            System.err.println("Undeclared error");
-            e.printStackTrace();
+        for (Callable testCase: cases) {
+            try {
+                testCase.call();
+            } catch (IOException e) {
+                System.err.println("Declared error");
+                e.printStackTrace();
+            } catch (Exception e) {
+                System.err.println("Undeclared error");
+                e.printStackTrace();
+            }
         }
     }
 }

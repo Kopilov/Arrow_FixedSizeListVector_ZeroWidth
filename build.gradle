@@ -7,11 +7,12 @@ version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
+    mavenLocal()
 }
 
 dependencies {
-    implementation group: 'org.apache.arrow', name: 'arrow-vector', version: '2.0.0'
-    implementation group: 'org.apache.arrow', name: 'arrow-memory-unsafe', version: '2.0.0'
+    implementation group: 'org.apache.arrow', name: 'arrow-vector', version: '3.0.0-SNAPSHOT'
+    implementation group: 'org.apache.arrow', name: 'arrow-memory-unsafe', version: '3.0.0-SNAPSHOT'
 
     testImplementation(platform('org.junit:junit-bom:5.7.0'))
     testImplementation('org.junit.jupiter:junit-jupiter')
